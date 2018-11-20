@@ -1,5 +1,8 @@
 package scalaalgebramodel 
 
+import org.json4s._
+import org.json4s.jackson.Serialization
+import org.json4s.jackson.Serialization.{read, write}
 import Q1.f1
 import Q1.f2
 
@@ -15,6 +18,13 @@ object Main extends App {
   override def main(args: Array[String]): Unit = {
     // Profile Q1
     //println(time { f2(30) })
-    //println(time { f1(30) })
+    //println(time { f1(30) })          
+
+    val originalExpression = And(Or(True, False), False);
+    val data = BooleanExpressionUtil.toJson(originalExpression)
+    val exp = BooleanExpressionUtil.fromJson(data);
+
+    println(data);
+    println(exp);
   }
 }
