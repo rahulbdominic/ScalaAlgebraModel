@@ -21,8 +21,8 @@ object Main extends App {
     //println(time { f1(30) })          
 
     val originalExpression = And(Or(True, False), False);
-    val data = BooleanExpressionUtil.toJson(originalExpression)
-    val exp = BooleanExpressionUtil.fromJson(data);
+    val data = BooleanExpressionUtil.toJsonHandleError(originalExpression)
+    val exp = BooleanExpressionUtil.fromJsonHandleError(data);
 
     println(data);
     println(exp);
