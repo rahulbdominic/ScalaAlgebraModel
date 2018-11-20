@@ -20,11 +20,14 @@ object Main extends App {
     //println(time { f2(30) })
     //println(time { f1(30) })          
 
-    val originalExpression = And(Or(True, False), False);
+    val originalExpression = And(Or(Variable("A"), Variable("B")), Variable("C"));
     val data = BooleanExpressionUtil.toJsonHandleError(originalExpression)
     val exp = BooleanExpressionUtil.fromJsonHandleError(data);
+    val minterms = BooleanExpressionUtil.getDisjunctiveNormalForm(originalExpression);
 
-    println(data);
-    println(exp);
+    //println(originalExpression);
+    //println(minterms);
+    //println(data);
+    //println(exp);
   }
 }
