@@ -21,9 +21,8 @@ object Main extends App {
     //println(time { f1(30) })          
 
     val originalExpression = And(Or(Variable("A"), Variable("B")), Variable("C"));
-    val data = BooleanExpressionUtil.toJsonHandleError(originalExpression)
-    val exp = BooleanExpressionUtil.fromJsonHandleError(data);
-    val minterms = BooleanExpressionUtil.getDisjunctiveNormalForm(originalExpression);
+    val data = originalExpression.toJsonHandleError
+    val exp = BooleanExpression.fromJsonHandleError(data);
 
     //println(originalExpression);
     //println(minterms);

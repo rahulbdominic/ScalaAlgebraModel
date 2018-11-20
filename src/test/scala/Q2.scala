@@ -3,14 +3,14 @@ package scalaalgebramodel
 import collection.mutable.Stack
 import org.scalatest._
 
-class BooleanExpressionUtilTest extends FlatSpec with Matchers {
+class BooleanExpressionTest extends FlatSpec with Matchers {
   "toJson" should "return successful result for atomic BooleanExpression" in {
      val expression = And(True, False)
      val expected = """
       {"opType":"And","e1":{"opType":"True$"},"e2":{"opType":"False$"}}
      """.trim
 
-     val actual = BooleanExpressionUtil.toJson(expression)
+     val actual = expression.toJson
 
      assert(actual.isSuccess)
      assert(actual.get == expected)
@@ -22,7 +22,7 @@ class BooleanExpressionUtilTest extends FlatSpec with Matchers {
       {"opType":"Not","e":{"opType":"Or","e1":{"opType":"And","e1":{"opType":"True$"},"e2":{"opType":"False$"}},"e2":{"opType":"Variable","symbol":"var"}}}
       """.trim
 
-     val actual = BooleanExpressionUtil.toJson(expression)
+     val actual = expression.toJson
 
      assert(actual.isSuccess)
      assert(actual.get == expected)
@@ -34,7 +34,7 @@ class BooleanExpressionUtilTest extends FlatSpec with Matchers {
       """.trim
      val expected = Not(Or(And(True, False), Variable("var")))
 
-     val actual = BooleanExpressionUtil.fromJson(json)
+     val actual = BooleanExpression.fromJson(json)
 
      assert(actual.isSuccess)
      assert(actual.get == expected)
@@ -45,7 +45,7 @@ class BooleanExpressionUtilTest extends FlatSpec with Matchers {
       {invalidJson} 
      """.trim
 
-     val actual = BooleanExpressionUtil.fromJson(json)
+     val actual = BooleanExpression.fromJson(json)
 
      assert(actual.isFailure)
   }
@@ -55,7 +55,7 @@ class BooleanExpressionUtilTest extends FlatSpec with Matchers {
       {invalidJson} 
      """.trim
 
-     val actual = BooleanExpressionUtil.fromJsonHandleError(json)
+     val actual = BooleanExpression.fromJsonHandleError(json)
      val expected = ""
 
      assert(actual == expected)
@@ -67,7 +67,7 @@ class BooleanExpressionUtilTest extends FlatSpec with Matchers {
       {"opType":"And","e1":{"opType":"True$"},"e2":{"opType":"False$"}}
      """.trim
 
-     val actual = BooleanExpressionUtil.toJsonHandleError(expression)
+     val actual = expression.toJsonHandleError
 
      assert(actual == expected)
   }
@@ -78,7 +78,7 @@ class BooleanExpressionUtilTest extends FlatSpec with Matchers {
       """.trim
      val expected = Not(Or(And(True, False), Variable("var")))
 
-     val actual = BooleanExpressionUtil.fromJsonHandleError(json)
+     val actual = BooleanExpression.fromJsonHandleError(json)
 
      assert(actual == expected)
   }

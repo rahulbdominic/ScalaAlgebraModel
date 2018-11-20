@@ -5,7 +5,94 @@ import scala.collection.immutable.Set
 import scala.collection.mutable.ListBuffer
 
 
-sealed trait BooleanExpression 
+sealed trait BooleanExpression {
+  import org.json4s._
+  import org.json4s.jackson.Serialization
+  
+  implicit val formats = new DefaultFormats {
+    override val typeHintFieldName = "opType"
+    override val typeHints = ShortTypeHints(List(
+      True.getClass, 
+      False.getClass, 
+      classOf[Variable],
+      classOf[Not],
+      classOf[Or],
+      classOf[And]
+    ))
+  }
+  
+  // Returning a Result is a better API than having a side 
+  // effect and printing the error here. However, another functions
+  // toJsonHandleError and fromJsonHandleError is also provided below
+  def toJson = {
+    Try {
+      Serialization.write(this)
+    } 
+  }
+   
+  def toJsonHandleError = {
+    val result = Try {
+      Serialization.write(this)
+    } 
+
+    result match {
+      case Success(v) => v
+      case Failure(e) => { 
+        println(s"Serialization error: ${e}")
+        ""
+      }
+    }
+  }
+
+  // TODO: Add tests
+  def getDisjunctiveNormalForm: BooleanExpression = {
+    val (minTerms, variables) = getMinTerms
+    val minTermExps = for (minTerm <- minTerms) yield 
+      BooleanExpression.minTermToExp(minTerm, variables)
+
+    BooleanExpression.orAll(minTermExps)
+  }
+  
+  // TODO: Add tests
+  def getMinTerms = {
+    val variables = BooleanExpression.getVariables(this)
+
+    val result = ListBuffer[Int]()
+    for (i <- 0 until math.pow(2, variables.size).toInt) {
+      val binValue = BooleanExpression.byteToBoolList(i, variables.size)
+      val map = variables.zip(binValue).toMap
+
+      if(evalute(map)) {
+        result += i
+      }
+    }
+
+    (result.toList, variables.toList)
+  }
+  
+  // TODO: Add tests
+  def evalute(values: Map[String, Boolean]) = {
+    def parseTree(that: BooleanExpression): BooleanExpression = that match {
+      case Or(e1, e2) => Or(parseTree(e1),  parseTree(e2))
+      case And(e1, e2) => And(parseTree(e1), parseTree(e2))
+      case Not(e) => Not(parseTree(e))
+      case Variable(symb) => if (values(symb)) True else False
+      case _ => that 
+    }
+
+    def evaluateTree(that: BooleanExpression): Boolean = that match {
+      case Or(e1, e2) => evaluateTree(e1) || evaluateTree(e2) 
+      case And(e1, e2) => evaluateTree(e1) &&  evaluateTree(e2)
+      case Not(e) => !evaluateTree(e)
+      case True => true
+      case False => false
+      case _ => throw new Exception("Invalid BooleanExpression to evaluate") 
+    }
+
+    val substitutedTree = parseTree(this)
+    evaluateTree(substitutedTree)
+  }
+} 
 
 case object True extends BooleanExpression
 
@@ -27,7 +114,7 @@ case class And(e1: BooleanExpression, e2: BooleanExpression) extends BooleanExpr
   override def toString = s"(${e1.toString} AND ${e2.toString})"
 }
 
-object BooleanExpressionUtil {
+object BooleanExpression {
   import org.json4s._
   import org.json4s.jackson.Serialization
   
@@ -85,33 +172,10 @@ object BooleanExpressionUtil {
       bitList ::: List.fill(size - bitList.length)(false)
     }
   }
-  
-  // Returning a Result is a better API than having a side 
-  // effect and printing the error here. However, another functions
-  // toJsonHandleError and fromJsonHandleError is also provided below
-  def toJson(exp: BooleanExpression) = {
-    Try {
-      Serialization.write(exp)
-    } 
-  }
 
   def fromJson(json: String) = {
     Try {
       Serialization.read[BooleanExpression](json)
-    }
-  }
-
-  def toJsonHandleError(exp: BooleanExpression) = {
-    val result = Try {
-      Serialization.write(exp)
-    } 
-
-    result match {
-      case Success(v) => v
-      case Failure(e) => { 
-        println(s"Serialization error: ${e}")
-        ""
-      }
     }
   }
 
@@ -129,44 +193,8 @@ object BooleanExpressionUtil {
     }
   }
 
-  def evalute(exp: BooleanExpression, values: Map[String, Boolean]) = {
-    def parseTree(that: BooleanExpression): BooleanExpression = that match {
-      case Or(e1, e2) => Or(parseTree(e1),  parseTree(e2))
-      case And(e1, e2) => And(parseTree(e1), parseTree(e2))
-      case Not(e) => Not(parseTree(e))
-      case Variable(symb) => if (values(symb)) True else False
-      case _ => that 
-    }
-
-    def evaluateTree(that: BooleanExpression): Boolean = that match {
-      case Or(e1, e2) => evaluateTree(e1) || evaluateTree(e2) 
-      case And(e1, e2) => evaluateTree(e1) &&  evaluateTree(e2)
-      case Not(e) => !evaluateTree(e)
-      case True => true
-      case False => false
-      case _ => throw new Exception("Invalid BooleanExpression to evaluate") 
-    }
-
-    val substitutedTree = parseTree(exp)
-    evaluateTree(substitutedTree)
-  }
-  
-  def getMinTerms(exp: BooleanExpression) = {
-    val variables = getVariables(exp)
-
-    val result = ListBuffer[Int]()
-    for (i <- 0 until math.pow(2, variables.size).toInt){
-      val binValue = byteToBoolList(i, variables.size)
-      val map = variables.zip(binValue).toMap
-
-      if(evaluteExpression(exp, map)) {
-        result += i
-      }
-    }
-
-    (result.toList, variables.toList)
-  }
-
+  // TODO: Add tests
+  // Returns False if the expression list is empty
   def orAll(exps: List[BooleanExpression]): BooleanExpression = {
     def buildExp(pairs: List[BooleanExpression]): Option[BooleanExpression] = {
       if (pairs.isEmpty) {
@@ -186,6 +214,7 @@ object BooleanExpressionUtil {
     }
   }
 
+  // TODO: Add tests
   def minTermToExp(minterm: Int, variables: List[String]) = {
     val binValue = byteToBoolList(minterm, variables.size)
     val pairs = variables.zip(binValue).toList
@@ -210,13 +239,5 @@ object BooleanExpressionUtil {
         case None => False
     }
   } 
-
-  def getDisjunctiveNormalForm(exp: BooleanExpression): BooleanExpression = {
-    val (minTerms, variables) = getMinTerms(exp)
-    val minTermExps = for (minTerm <- minTerms) yield 
-      minTermToExp(minTerm, variables)
-
-    orAll(minTermExps)
-  }
 }
 
